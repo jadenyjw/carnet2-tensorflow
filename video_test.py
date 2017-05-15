@@ -24,6 +24,10 @@ class Application:
             self.upKeyDown = True
         def upKeyReleased(event):
             self.upKeyDown = False
+        def setAutonomousMode():
+            self.autonomousMode = True
+        def setManualMode():
+            self.autonomousMode = False
 
         self.leftKeyDown = False
         self.rightKeyDown = False
@@ -35,6 +39,8 @@ class Application:
         self.angleInterval = 10
         self.speedInterval = 16
 
+        self.autonomousMode = False
+
         self.vs = cv2.VideoCapture("http://" + camera + ":8080/video") # capture video frames, 0 is your default video
         print(self.vs)
         self.current_image = None  # current image from the camera
@@ -44,6 +50,16 @@ class Application:
         self.root.protocol('WM_DELETE_WINDOW', self.destructor)
         self.panel = tk.Label(self.root)  # initialize image panel
         self.panel.pack(padx=10, pady=10)
+        self.interfacePanel = tk.Label(self.root)  # initialize image panel
+        self.interfacePanel.pack(padx=10, pady=10)
+        self.trainingButton = tk.Button(self.interfacePanel, text ="Training Mode", command = setManualMode)
+        self.trainingButton.pack()
+        self.autonomousButton = tk.Button(self.interfacePanel, text ="Autonomous Mode", command = setAutonomousMode)
+        self.autonomousButton.pack()
+        self.speedLabel = tk.Label(self.interfacePanel, text = "Speed: ")
+        self.speedLabel.pack()
+        self.angleLabel = tk.Label(self.interfacePanel, text = "Angle: ")
+        self.angleLabel.pack()
         self.root.config(cursor="arrow")
         self.root.bind('<Left>', leftKey)
         self.root.bind("<KeyRelease-Left>", leftKeyReleased)
@@ -52,8 +68,6 @@ class Application:
         self.root.bind('<Up>', upKey)
         self.root.bind("<KeyRelease-Up>", upKeyReleased)
 
-        # start a self.video_loop that constantly pools the video sensor
-        # for the most recently read frame
         self.video_loop()
         self.key_loop()
         self.network_loop()
@@ -62,17 +76,17 @@ class Application:
         self.root.after(10, self.network_loop)
 
     def key_loop(self):
-
-        if(self.rightKeyDown and self.angle + self.angleInterval <= 90):
-            self.angle += self.angleInterval
-        if(self.leftKeyDown and self.angle - self.angleInterval >= -90):
-            self.angle -= self.angleInterval
-        if(not self.leftKeyDown and not self.rightKeyDown):
-            self.angle = 0
-        if(self.upKeyDown and self.speed + self.speedInterval <= 128):
-            self.speed += self.speedInterval
-        if(not self.upKeyDown):
-            self.speed = 0
+        if(not self.autonomousMode):
+            if(self.rightKeyDown and self.angle + self.angleInterval <= 90):
+                self.angle += self.angleInterval
+            if(self.leftKeyDown and self.angle - self.angleInterval >= -90):
+                self.angle -= self.angleInterval
+            if(not self.leftKeyDown and not self.rightKeyDown):
+                self.angle = 0
+            if(self.upKeyDown and self.speed + self.speedInterval <= 128):
+                self.speed += self.speedInterval
+            if(not self.upKeyDown):
+                self.speed = 0
         self.root.after(100, self.key_loop)
 
     def video_loop(self):
@@ -88,7 +102,9 @@ class Application:
             self.panel.config(image=imgtk)  # show the image
 
         print("Speed: " + str(self.speed))
+        self.speedLabel.config(text="Speed: " + str(self.speed))
         print("Angle: " + str(self.angle))
+        self.angleLabel.config(text="Angle: " + str(self.angle))
         self.root.after(1, self.video_loop)  # call the same function after 30 milliseconds
 
     def destructor(self):
