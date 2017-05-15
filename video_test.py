@@ -10,22 +10,32 @@ import os
 
 class Application:
 
-
-
-    def __init__(self):
+    def __init__(self, camera, car):
 
         def leftKey(event):
             self.leftKeyDown = True
-        def rightKey(event):
-            self.rightKeyDown = True
         def leftKeyReleased(event):
             self.leftKeyDown = False
+        def rightKey(event):
+            self.rightKeyDown = True
         def rightKeyReleased(event):
             self.rightKeyDown = False
+        def upKey(event):
+            self.upKeyDown = True
+        def upKeyReleased(event):
+            self.upKeyDown = False
 
         self.leftKeyDown = False
         self.rightKeyDown = False
-        self.vs = cv2.VideoCapture("http://192.168.12.70:8080/video") # capture video frames, 0 is your default video
+        self.upKeyDown = False
+
+        self.speed = 0
+        self.angle = 0
+
+        self.angleInterval = 10
+        self.speedInterval = 16
+
+        self.vs = cv2.VideoCapture("http://" + camera + ":8080/video") # capture video frames, 0 is your default video
         print(self.vs)
         self.current_image = None  # current image from the camera
         self.root = tk.Tk()  # initialize root window
@@ -36,22 +46,33 @@ class Application:
         self.panel.pack(padx=10, pady=10)
         self.root.config(cursor="arrow")
         self.root.bind('<Left>', leftKey)
-        self.root.bind('<Right>', rightKey)
         self.root.bind("<KeyRelease-Left>", leftKeyReleased)
+        self.root.bind('<Right>', rightKey)
         self.root.bind("<KeyRelease-Right>", rightKeyReleased)
-
+        self.root.bind('<Up>', upKey)
+        self.root.bind("<KeyRelease-Up>", upKeyReleased)
 
         # start a self.video_loop that constantly pools the video sensor
         # for the most recently read frame
         self.video_loop()
         self.key_loop()
+        self.network_loop()
+
+    def network_loop(self):
+        self.root.after(10, self.network_loop)
 
     def key_loop(self):
-        if(self.rightKeyDown):
-            print("Right key pressed")
-        if(self.leftKeyDown):
-            print("Left key pressed")
-        print("filler")
+
+        if(self.rightKeyDown and self.angle + self.angleInterval <= 90):
+            self.angle += self.angleInterval
+        if(self.leftKeyDown and self.angle - self.angleInterval >= -90):
+            self.angle -= self.angleInterval
+        if(not self.leftKeyDown and not self.rightKeyDown):
+            self.angle = 0
+        if(self.upKeyDown and self.speed + self.speedInterval <= 128):
+            self.speed += self.speedInterval
+        if(not self.upKeyDown):
+            self.speed = 0
         self.root.after(100, self.key_loop)
 
     def video_loop(self):
@@ -65,6 +86,9 @@ class Application:
             imgtk = ImageTk.PhotoImage(image=resized_image)  # convert image for tkinter
             self.panel.imgtk = imgtk  # anchor imgtk so it does not be deleted by garbage-collector
             self.panel.config(image=imgtk)  # show the image
+
+        print("Speed: " + str(self.speed))
+        print("Angle: " + str(self.angle))
         self.root.after(1, self.video_loop)  # call the same function after 30 milliseconds
 
     def destructor(self):
@@ -76,9 +100,11 @@ class Application:
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
+ap.add_argument("--camera", default="192.168.12.70")
+ap.add_argument("--car")
 args = vars(ap.parse_args())
 
 # start the app
 print("[INFO] starting...")
-pba = Application()
+pba = Application(args["camera"], args["car"])
 pba.root.mainloop()
