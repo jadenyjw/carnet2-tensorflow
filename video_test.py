@@ -2,10 +2,13 @@ import PIL
 from PIL import Image, ImageTk
 import tkinter as tk
 import argparse
-import datetime
 import cv2
 import sys
 import os
+import socket
+
+from keras.models import Model, load_model
+from keras.layers import Input, Conv2D, MaxPooling2D, Activation, Dropout, Flatten, Dense
 
 
 class Application:
@@ -41,7 +44,11 @@ class Application:
 
         self.autonomousMode = False
 
-        self.vs = cv2.VideoCapture("http://" + camera + ":8080/video") # capture video frames, 0 is your default video
+        self.camera = camera
+        self.car = car
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        self.vs = cv2.VideoCapture("http://" + self.camera + ":8080/video") # capture video frames, 0 is your default video
         print(self.vs)
         self.current_image = None  # current image from the camera
         self.root = tk.Tk()  # initialize root window
@@ -60,6 +67,8 @@ class Application:
         self.speedLabel.pack()
         self.angleLabel = tk.Label(self.interfacePanel, text = "Angle: ")
         self.angleLabel.pack()
+        self.speed = 0
+        self.angle = 0
         self.root.config(cursor="arrow")
         self.root.bind('<Left>', leftKey)
         self.root.bind("<KeyRelease-Left>", leftKeyReleased)
@@ -72,7 +81,12 @@ class Application:
         self.key_loop()
         self.network_loop()
 
-    def network_loop(self):
+    def network_loop(self):    
+        car_bytes = bytearray()
+        car_bytes.append(self.speed)
+        car_bytes.append(':')
+        car_bytes.append(self.angle)
+        self.sock.sendto(car_bytes, (self.car, 42069))
         self.root.after(10, self.network_loop)
 
     def key_loop(self):
