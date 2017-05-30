@@ -6,6 +6,8 @@ import cv2
 import sys
 import os
 import socket
+import numpy as np
+import h5py
 
 from keras.models import Model, load_model
 from keras.layers import Input, Conv2D, MaxPooling2D, Activation, Dropout, Flatten, Dense
@@ -49,7 +51,6 @@ class Application:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         self.vs = cv2.VideoCapture("http://" + self.camera + ":8080/video") # capture video frames, 0 is your default video
-        print(self.vs)
         self.current_image = None  # current image from the camera
         self.root = tk.Tk()  # initialize root window
         self.root.title("Carnet2")  # set window title
@@ -77,17 +78,24 @@ class Application:
         self.root.bind('<Up>', upKey)
         self.root.bind("<KeyRelease-Up>", upKeyReleased)
 
+        self.file = h5py.File("data.h5", "w")
         self.video_loop()
         self.key_loop()
         self.network_loop()
+        #self.record_loop()
 
-    def network_loop(self):    
-        car_bytes = bytearray()
-        car_bytes.append(self.speed)
-        car_bytes.append(':')
-        car_bytes.append(self.angle)
-        self.sock.sendto(car_bytes, (self.car, 42069))
+    def record_loop(self):
+        if(not self.autonomousMode and (self.speed is not 0 or self.angle is not 0)):
+            arr = np.array([[self.cv2image], [self.speed], [self.angle]], dtype=object)
+            pickle.dump(arr, self.file)
+        self.root.after(500, self.record_loop)
+
+
+    def network_loop(self):
+        message = str(self.speed) + ':' + str(self.angle) + '&'
+        self.sock.sendto(str.encode(message), (self.car, 42069))
         self.root.after(10, self.network_loop)
+
 
     def key_loop(self):
         if(not self.autonomousMode):
@@ -101,37 +109,36 @@ class Application:
                 self.speed += self.speedInterval
             if(not self.upKeyDown):
                 self.speed = 0
-        self.root.after(100, self.key_loop)
+        self.root.after(50, self.key_loop)
 
     def video_loop(self):
         """ Get frame from the video stream and show it in Tkinter """
         ok, frame = self.vs.read()  # read frame from video stream
 
         if ok:  # frame captured without any errors
-            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)  # convert colors from BGR to RGBA
-            self.current_image = Image.fromarray(cv2image)  # convert image for PIL
+            self.cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # convert colors from BGR to RGBA
+            self.current_image = Image.fromarray(self.cv2image)  # convert image for PIL
             resized_image = self.current_image.resize([880, 720],PIL.Image.ANTIALIAS)
             imgtk = ImageTk.PhotoImage(image=resized_image)  # convert image for tkinter
             self.panel.imgtk = imgtk  # anchor imgtk so it does not be deleted by garbage-collector
             self.panel.config(image=imgtk)  # show the image
 
-        print("Speed: " + str(self.speed))
         self.speedLabel.config(text="Speed: " + str(self.speed))
-        print("Angle: " + str(self.angle))
         self.angleLabel.config(text="Angle: " + str(self.angle))
         self.root.after(1, self.video_loop)  # call the same function after 30 milliseconds
 
     def destructor(self):
         """ Destroy the root object and release all resources """
         print("[INFO] closing...")
+        self.file.close()
         self.root.destroy()
         self.vs.release()  # release web camera
 
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("--camera", default="192.168.12.70")
-ap.add_argument("--car")
+ap.add_argument("--camera", default="192.168.12.8")
+ap.add_argument("--car", default="192.168.12.220")
 args = vars(ap.parse_args())
 
 # start the app

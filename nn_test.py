@@ -21,7 +21,7 @@ x = Dense(128)(merged)
 x = Activation('linear')(x)
 x = Dropout(.2)(x)
 
-angle_out = Dense(1, name='angle_out')(x)
+angle_out = Dense(2)(x)
 
 model = Model(inputs=img_in, outputs=angle_out)
 model.compile(optimizer='adam', loss='mean_squared_error')
