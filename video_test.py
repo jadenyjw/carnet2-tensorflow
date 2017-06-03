@@ -7,7 +7,7 @@ import sys
 import os
 import socket
 import numpy as np
-import h5py
+import pickle
 
 from keras.models import Model, load_model
 from keras.layers import Input, Conv2D, MaxPooling2D, Activation, Dropout, Flatten, Dense
@@ -42,13 +42,15 @@ class Application:
         self.angle = 0
 
         self.angleInterval = 10
-        self.speedInterval = 16
+        self.speedInterval = 51
 
         self.autonomousMode = False
 
         self.camera = camera
         self.car = car
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        self.file = open('data.npy', 'ab')
 
         self.vs = cv2.VideoCapture("http://" + self.camera + ":8080/video") # capture video frames, 0 is your default video
         self.current_image = None  # current image from the camera
@@ -68,8 +70,6 @@ class Application:
         self.speedLabel.pack()
         self.angleLabel = tk.Label(self.interfacePanel, text = "Angle: ")
         self.angleLabel.pack()
-        self.speed = 0
-        self.angle = 0
         self.root.config(cursor="arrow")
         self.root.bind('<Left>', leftKey)
         self.root.bind("<KeyRelease-Left>", leftKeyReleased)
@@ -77,24 +77,21 @@ class Application:
         self.root.bind("<KeyRelease-Right>", rightKeyReleased)
         self.root.bind('<Up>', upKey)
         self.root.bind("<KeyRelease-Up>", upKeyReleased)
-
-        self.file = h5py.File("data.h5", "w")
         self.video_loop()
         self.key_loop()
         self.network_loop()
-        #self.record_loop()
+        self.record_loop()
 
     def record_loop(self):
         if(not self.autonomousMode and (self.speed is not 0 or self.angle is not 0)):
-            arr = np.array([[self.cv2image], [self.speed], [self.angle]], dtype=object)
-            pickle.dump(arr, self.file)
+            np.save(self.file, [self.cv2image, [self.speed, self.angle]])
         self.root.after(500, self.record_loop)
 
 
     def network_loop(self):
         message = str(self.speed) + ':' + str(self.angle) + '&'
         self.sock.sendto(str.encode(message), (self.car, 42069))
-        self.root.after(10, self.network_loop)
+        self.root.after(30, self.network_loop)
 
 
     def key_loop(self):
@@ -105,11 +102,11 @@ class Application:
                 self.angle -= self.angleInterval
             if(not self.leftKeyDown and not self.rightKeyDown):
                 self.angle = 0
-            if(self.upKeyDown and self.speed + self.speedInterval <= 128):
+            if(self.upKeyDown and self.speed + self.speedInterval <= 255):
                 self.speed += self.speedInterval
             if(not self.upKeyDown):
                 self.speed = 0
-        self.root.after(50, self.key_loop)
+        self.root.after(10, self.key_loop)
 
     def video_loop(self):
         """ Get frame from the video stream and show it in Tkinter """
@@ -128,6 +125,7 @@ class Application:
         self.root.after(1, self.video_loop)  # call the same function after 30 milliseconds
 
     def destructor(self):
+
         """ Destroy the root object and release all resources """
         print("[INFO] closing...")
         self.file.close()
