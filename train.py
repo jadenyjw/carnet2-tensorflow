@@ -21,10 +21,6 @@ with open('data.npy', 'rb') as f:
         except OSError:
             break
 
-    #print(X)
-    #print(Y)
-
-
 X = np.array(X)
 Y = np.array(Y)
 
@@ -42,15 +38,6 @@ val_X, val_Y = shuffled_X[test_cutoff:val_cutoff], shuffled_Y[test_cutoff:val_cu
 test_X, test_Y = shuffled_X[val_cutoff:], shuffled_Y[val_cutoff:]
 
 len(train_X) + len(val_X) + len(test_X)
-
-'''
-X_flipped = np.array([np.fliplr(i) for i in train_X])
-Y_flipped = np.array([-i for i in train_Y])
-train_X = np.concatenate([train_X, X_flipped])
-train_Y = np.concatenate([train_Y, Y_flipped])
-len(train_X)
-'''
-
 
 print(train_X.shape)
 #print(train_X[0].shape())
@@ -74,13 +61,13 @@ x = Dense(128, kernel_regularizer=keras.regularizers.l2(.005))(merged)
 x = Activation('linear')(x)
 x = Dropout(.2)(x)
 
-speed_and_angle = Dense(2, kernel_regularizer=keras.regularizers.l2(.005))(x)
+angle = Dense(1, kernel_regularizer=keras.regularizers.l2(.005))(x)
 
-model = Model(inputs=img_in, outputs=speed_and_angle)
+model = Model(inputs=img_in, outputs=angle)
 model.compile(optimizer='adam', loss='mean_squared_error')
 model.summary()
 
-model_path = os.path.expanduser('~/best_autopilot.hdf5')
+model_path = os.path.expanduser('autopilot.h5')
 
 #Save the model after each epoch if the validation loss improved.
 save_best = callbacks.ModelCheckpoint(model_path, monitor='val_loss', verbose=1,
