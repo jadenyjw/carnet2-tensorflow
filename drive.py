@@ -37,6 +37,9 @@ class Application:
         self.leftKeyDown = False
         self.rightKeyDown = False
         self.upKeyDown = False
+        
+        self.leftText = 'left'
+        self.rightText = 'right'
 
         self.speed = 0
         self.angle = 0
@@ -140,7 +143,14 @@ class Application:
             self.panel.config(image=imgtk)  # show the image
 
         self.speedLabel.config(text="Speed: " + str(self.speed))
-        self.angleLabel.config(text="Angle: " + str(self.angle))
+        
+        if(self.angle > 0):
+            self.angleLabel.config(text="Angle: " + RightText + str(abs(self.angle)))
+        elif(self.angle < 0):
+            self.angleLabel.config(text="Angle: " + LeftText + str(abs(self.angle)))  
+        else:
+            self.angleLabel.config('0')
+            
         self.root.after(1, self.video_loop)  # call the same function after 30 milliseconds
 
     def destructor(self):
