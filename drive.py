@@ -1,3 +1,4 @@
+#import dependencies
 import PIL
 from PIL import Image, ImageTk
 import tkinter as tk
@@ -9,14 +10,14 @@ import socket
 import numpy as np
 import pickle
 
+#imports Keras module for image processing 
 from keras.models import Model, load_model
 from keras.layers import Input, Conv2D, MaxPooling2D, Activation, Dropout, Flatten, Dense
 
 
 class Application:
-
     def __init__(self, camera, car):
-
+        #functions related to key presses.
         def leftKey(event):
             self.leftKeyDown = True
         def leftKeyReleased(event):
@@ -33,26 +34,27 @@ class Application:
             self.autonomousMode = True
         def setManualMode():
             self.autonomousMode = False
-
+            
+        #initialize as 0
         self.leftKeyDown = False
         self.rightKeyDown = False
         self.upKeyDown = False
-        
+        #text used to indicate direction
         self.leftText = 'left'
         self.rightText = 'right'
-
+        #initializes as 0 for speed and angle (to be displayed)
         self.speed = 0
         self.angle = 0
-
+        #rate of increase
         self.angleInterval = 10
         self.speedInterval = 51
-
+        #initializes the program in training mode
         self.autonomousMode = False
-
+       
         self.camera = camera
         self.car = car
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
+        #Opens data file for training data
         self.file = open('data.npy', 'ab')
         try:
             self.model = load_model('autopilot.h5')
