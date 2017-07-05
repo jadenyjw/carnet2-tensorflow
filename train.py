@@ -9,11 +9,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
-
+#opens to read && binary
 with open('data.npy', 'rb') as f:
     X = []
     Y = []
-    while 1:
+    while 1: #ohh lord this hurts me
         try:
             temp = np.load(f)
             X.append(temp[0])

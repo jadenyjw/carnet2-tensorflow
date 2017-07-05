@@ -10,7 +10,7 @@ import socket
 import numpy as np
 import pickle
 
-#imports Keras module for image processing 
+#imports Keras module for image processing
 from keras.models import Model, load_model
 from keras.layers import Input, Conv2D, MaxPooling2D, Activation, Dropout, Flatten, Dense
 
@@ -34,7 +34,7 @@ class Application:
             self.autonomousMode = True
         def setManualMode():
             self.autonomousMode = False
-            
+
         #initialize as 0
         self.leftKeyDown = False
         self.rightKeyDown = False
@@ -50,17 +50,20 @@ class Application:
         self.speedInterval = 51
         #initializes the program in training mode
         self.autonomousMode = False
-       
+
+        #Instances of such objects started
         self.camera = camera
         self.car = car
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) #format (IP PROTOCOL, packet structure(datagram))
+
         #Opens data file for training data
-        self.file = open('data.npy', 'ab')
+        self.file = open('data.npy', 'ab') #(file, binary append)
         try:
             self.model = load_model('autopilot.h5')
         except:
             print("Error loading model.")
 
+        #setup GUI
         self.vs = cv2.VideoCapture("http://" + self.camera + ":8080/video") # capture video frames, 0 is your default video
         self.current_image = None  # current image from the camera
         self.root = tk.Tk()  # initialize root window
@@ -86,15 +89,18 @@ class Application:
         self.root.bind("<KeyRelease-Right>", rightKeyReleased)
         self.root.bind('<Up>', upKey)
         self.root.bind("<KeyRelease-Up>", upKeyReleased)
+
+        #Runs loops
         self.video_loop()
         self.key_loop()
         self.network_loop()
         self.record_loop()
         self.ai_loop()
 
+
     def record_loop(self):
         if(not self.autonomousMode and (self.speed is not 0 or self.angle is not 0)):
-            np.save(self.file, [self.cv2image, self.angle])
+            np.save(self.file, [self.cv2image, self.angle]) #(numpy array)
         self.root.after(500, self.record_loop)
 
 
@@ -104,7 +110,7 @@ class Application:
         self.root.after(10, self.network_loop)
 
 
-    def key_loop(self):
+    def key_loop(self): #only if in self driving mode
         if(not self.autonomousMode):
             if(self.rightKeyDown and self.angle + self.angleInterval <= 90):
                 self.angle += self.angleInterval
@@ -120,7 +126,7 @@ class Application:
 
     def ai_loop(self):
         if(self.autonomousMode):
-            a = self.model.predict(np.array(self.cv2image).reshape(1, 144,176,3))
+            a = self.model.predict(np.array(self.cv2image).reshape(1, 144,176,3)) #Uses the model to predict
             if(a[0][0] > 90):
                 a[0][0] = 90
             elif(a[0][0] < -90):
@@ -145,14 +151,14 @@ class Application:
             self.panel.config(image=imgtk)  # show the image
 
         self.speedLabel.config(text="Speed: " + str(self.speed))
-        
+
         if(self.angle > 0):
             self.angleLabel.config(text="Angle: " + RightText + str(abs(self.angle)))
         elif(self.angle < 0):
-            self.angleLabel.config(text="Angle: " + LeftText + str(abs(self.angle)))  
+            self.angleLabel.config(text="Angle: " + LeftText + str(abs(self.angle)))
         else:
             self.angleLabel.config('0')
-            
+
         self.root.after(1, self.video_loop)  # call the same function after 30 milliseconds
 
     def destructor(self):
